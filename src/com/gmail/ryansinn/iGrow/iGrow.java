@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -28,6 +30,7 @@ public class iGrow extends JavaPlugin
   public int AREA_ = 100;
   public boolean DEBUGMESSAGES_ = false;
   private final HashMap<Player, Boolean> debugees = new HashMap();
+  private final HashMap<String, String> recipeBlock = new HashMap();
   public ArrayList<Recipe> Recipes = new ArrayList();
   Thread Event = new onEvent(this);
 
@@ -147,17 +150,89 @@ public class iGrow extends JavaPlugin
       DataInputStream in = new DataInputStream(fstream);
       BufferedReader br = new BufferedReader(new InputStreamReader(in));
       String strLine;
+      sM("Reading recipes...");
       while ((strLine = br.readLine()) != null)
       {
-        if (strLine.startsWith("#")) {
+        if (strLine.startsWith("#") || strLine.length() < 2) {
           continue;
         }
         String[] removeComments = strLine.split("#");
 	    String[] donees = removeComments[0].split(",");
-        if ((donees.length < 4) || (donees.length > 6)) {
-          continue;
-        }
         Recipe recipe = new Recipe();
+        if (strLine.contains("old:") && strLine.contains("new:")) {
+        	recipe = scanRecipes_2_2(donees, recipe);
+        } else {
+        	try {
+        		Integer.parseInt(strLine.substring(0, 1));
+        		//sMdebug("int parsed ("+strLine.substring(0,1)+") v2.0 scan running...");
+        		recipe = scanRecipes_2_0(donees, recipe);
+        	}
+        	catch(NumberFormatException nfe)
+        	{
+        		recipe = scanRecipes_2_1(donees, recipe);
+        	}
+        } 
+
+        if (recipe.oldBlock != null) {
+        	sMdebug("Recipe: oldblock:"+recipe.oldBlock+"@"+recipe.oldBlockData+", newblock: "+recipe.newBlock+"@"+recipe.newBlockData+", need: "+recipe.needBlock+"@"+recipe.needBlockData+", chance: "+recipe.Chance[0]+"/"+(recipe.Chance[1]+1)+", world:"+recipe.world);
+        
+        	this.Recipes.add(recipe);
+        } else {
+        	sMdebug("Invalid recipe: strLine was - "+strLine);
+        }
+      }
+      sM("Loaded " + this.Recipes.size() + " recipes!");
+      in.close();
+    } catch (Exception e) {
+      System.err.println("Error: " + e.getMessage());
+    }
+  }
+    
+public Recipe scanRecipes_2_2(String[] donees, Recipe recipe) {
+    for (int x = 0; x < donees.length; x++)
+    {
+        String[] recipeKeys = donees[x].split(":");
+        if (recipeKeys.length == 2) {
+        	recipeBlock.put(recipeKeys[0], recipeKeys[1]);
+        }
+    }
+
+    if (recipeBlock.get("old") != null) {
+    	recipe.oldBlock = recipeBlock.get("old").split("@")[0];
+    	if (recipeBlock.get("old").split("@").length > 1) recipe.oldBlockData = recipeBlock.get("old").split("@")[1];
+    }
+    if (recipeBlock.get("new") != null) {
+    	recipe.newBlock = recipeBlock.get("new").split("@")[0];    	
+    	if (recipeBlock.get("new").split("@").length > 1) recipe.newBlockData = recipeBlock.get("new").split("@")[1];
+    }
+    if (recipeBlock.get("need") != null) {
+    	recipe.needBlock = recipeBlock.get("need").split("@")[0];    	
+    	if (recipeBlock.get("need").split("@").length > 1) recipe.needBlockData = recipeBlock.get("need").split("@")[1];
+    }
+    if (recipeBlock.get("world") != null) recipe.world = recipeBlock.get("world");
+    if (recipeBlock.get("near") != null) {
+    	if (recipeBlock.get("near") == "true") {
+    		recipe.Near = true;
+    	}
+    }
+    if (recipeBlock.get("chance") != null) {
+    	recipe.Chance[0] = Integer.parseInt(recipeBlock.get("chance").split("/")[0]);
+    	recipe.Chance[1] = Integer.parseInt(recipeBlock.get("chance").split("/")[1]) - 1;
+    }
+
+    if (recipe.oldBlockData == null) recipe.oldBlockData = "";
+    if (recipe.newBlockData == null) recipe.newBlockData = "";
+    if (recipe.needBlockData == null) recipe.needBlockData = "";
+
+    return recipe;
+}
+        
+public Recipe scanRecipes_2_1(String[] donees, Recipe recipe) {
+        
+	    if ((donees.length < 4) || (donees.length > 6)) {
+	    	sMdebug("Invalid line, not enough values found.  Values found: "+donees.length+".  Should be 5 or 6.");
+	    	return null;
+        }
         if (donees[0].contains("@")) {
         	String[] needBlockDataArray = donees[0].split("@");
         	recipe.oldBlock = String.valueOf(needBlockDataArray[0]);
@@ -172,7 +247,7 @@ public class iGrow extends JavaPlugin
         	recipe.newBlockData = String.valueOf(needBlockDataArray[1]);
         } else {
         	recipe.newBlock = String.valueOf(donees[1]);
-        	recipe.newBlockData = "";					  
+        	recipe.newBlockData = "";				  
         }
         if (donees[2].contains("@")) {
         	String[] needBlockDataArray = donees[2].split("@");
@@ -189,7 +264,7 @@ public class iGrow extends JavaPlugin
         }
         else {
           System.err.println("Error loading recipe for iGrow!");
-          continue;
+          return null;
         }
         if (donees[4].contains("true")) {
           recipe.Near = true;
@@ -200,15 +275,38 @@ public class iGrow extends JavaPlugin
 		if (donees.length == 6) {
 		  recipe.world = donees[5]; 
         }
-        this.Recipes.add(recipe);
-      }
-      sM("Loaded " + this.Recipes.size() + " recipes!");
-      in.close();
-    } catch (Exception e) {
-      System.err.println("Error: " + e.getMessage());
-    }
+		return recipe;
   }
 
+
+public Recipe scanRecipes_2_0(String[] donees, Recipe recipe) {
+	if ((donees.length < 4) || (donees.length > 6)) {
+    	sMdebug("Invalid line, not enough values found.  Values found: "+donees.length+".  Should be 5 or 6.");
+		return null;
+	}
+	recipe.oldBlock = Material.getMaterial(Integer.parseInt(donees[0])).name();
+	recipe.newBlock = Material.getMaterial(Integer.parseInt(donees[1])).name();
+	recipe.needBlock = Material.getMaterial(Integer.parseInt(donees[2])).name();
+	if (donees[3].contains(":")) {
+		String[] donees3 = donees[3].split(":");
+		recipe.Chance[0] = Integer.parseInt(donees3[0]);
+		recipe.Chance[1] = (Integer.parseInt(donees3[1]) - 1);
+	}
+	else {
+		System.err.println("Error loading recipe for iGrow!");
+		return null;
+	}
+	if (donees[4].contains("true")) {
+		recipe.Near = true;
+	}
+	else if (donees[4].contains("false")) {
+		recipe.Near = false;
+	}
+	if (donees.length == 6) {
+		recipe.world = donees[5];
+	}
+	return recipe;
+}
   public boolean isDebugging(Player player) {
     if (this.debugees.containsKey(player)) {
       return ((Boolean)this.debugees.get(player)).booleanValue();
