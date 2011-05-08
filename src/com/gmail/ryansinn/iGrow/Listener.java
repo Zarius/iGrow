@@ -35,6 +35,8 @@ public class Listener
 			  {
 				  int lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.DOWN).getLightLevel();
 				  String biome = p2.getWorld().getBlockAt(x, y, z).getBiome().name();
+				  Byte thisBlockData = p2.getWorld().getBlockAt(x, y, z).getData();
+				  Material thisBlockType = p2.getWorld().getBlockAt(x, y, z).getType();
 				  
 				  for (Recipe r : plugin.Recipes) {
 					  Matcher matcher = pattern.matcher(r.world);
@@ -89,23 +91,23 @@ public class Listener
 							  //plugin.sMdebug("Checking data. - "+r.needBlock+"@"+r.needBlockData);
 							  if (r.needBlock.matches("LEAVES")) {
 								  //plugin.sMdebug("Leaves data found.");
-								  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
+								  if (thisBlockData != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
 							  }
 							  if (r.needBlock.matches("LOG")) {
 								  //plugin.sMdebug("Leaves data found.");
-								  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
+								  if (thisBlockData != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
 							  }
 							  if (r.needBlock.matches("WOOL")) {
 								  //plugin.sMdebug("Wool data found.");
-								  if (p2.getWorld().getBlockAt(x, y, z).getData() != DyeColor.valueOf(r.needBlockData).getData()) continue;
+								  if (thisBlockData != DyeColor.valueOf(r.needBlockData).getData()) continue;
 							  }
 						  }
-						  if (p2.getWorld().getBlockAt(x, y, z).getType() == Material.valueOf(r.needBlock)) {
+						  if (thisBlockType == Material.valueOf(r.needBlock)) {
 							  plugin.sMdebug("Recipe matched - found: " + r.needBlock + "@"+r.needBlockData+", " + r.oldBlock + "@" + r.oldBlockData + "->" + r.newBlock + "@"+r.newBlockData+":" + r.world);
-							  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
+							  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), thisBlockType, r);
 						  }
 						  if ((!r.Near) || 
-								  (p2.getWorld().getBlockAt(x, y, z).getType() != Material.valueOf(r.newBlock))) continue;
+								  (thisBlockType != Material.valueOf(r.newBlock))) continue;
 
 						  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
 					  }
@@ -113,11 +115,11 @@ public class Listener
     }
   }
 
-  public static void ChangeBlocks(World world, iGrow plugin, Block neededBlock, Recipe r)
+  public static void ChangeBlocks(World world, iGrow plugin, Block neededBlock, Material neededBlockType, Recipe r)
   {
 	  String connections = getConnected(world, neededBlock.getLocation(), Material.valueOf(r.oldBlock), r.oldBlockData);
 
-	  if ((neededBlock.getType() == Material.valueOf(r.needBlock)) && connections != "") {
+	  if ((neededBlockType == Material.valueOf(r.needBlock)) && connections != "") {
 		  int random = new Random().nextInt(r.Chance[1]) + 1;
 		  if (random <= r.Chance[0]) {
 			  ChangeBlock(neededBlock, connections, r);
