@@ -7,6 +7,7 @@ import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -20,38 +21,95 @@ public class Listener
     for (Player p2 : plugin.getServer().getOnlinePlayers()) {
       Pattern pattern = Pattern.compile("\\s*"+p2.getWorld().getName()+"\\s*"); // compile our regex check for matching world here so only once per player
       plugin.sMdebug("MineCraft Time: " + p2.getWorld().getTime() + " | " + p2.getName() + "@" + p2.getWorld().getName());
-      for (int x = (int)p2.getLocation().getX() - plugin.AREA_; x <= p2.getLocation().getX() + plugin.AREA_; x++)
-        for (int y = (int)p2.getLocation().getY() - plugin.AREA_; y <= p2.getLocation().getY() + plugin.AREA_; y++)
-          for (int z = (int)p2.getLocation().getZ() - plugin.AREA_; z <= p2.getLocation().getZ() + plugin.AREA_; z++)
-            for (Recipe r : plugin.Recipes) {
-              Matcher matcher = pattern.matcher(r.world);
-              if (r.world == "" || matcher.matches()) {
-            	  // If data exists for the needed block, check for a match - skip if no match.
-            	  if (r.needBlockData != "") {
-            		  //plugin.sMdebug("Checking data. - "+r.needBlock+"@"+r.needBlockData);
-            		  if (r.needBlock.matches("LEAVES")) {
-            			  //plugin.sMdebug("Leaves data found.");
-            			  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
-            		  }
-            		  if (r.needBlock.matches("LOG")) {
-            			  //plugin.sMdebug("Leaves data found.");
-            			  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
-            		  }
-            		  if (r.needBlock.matches("WOOL")) {
-            			  //plugin.sMdebug("Wool data found.");
-            			  if (p2.getWorld().getBlockAt(x, y, z).getData() != DyeColor.valueOf(r.needBlockData).getData()) continue;
-            		  }
-            	  }
-            	  if (p2.getWorld().getBlockAt(x, y, z).getType() == Material.valueOf(r.needBlock)) {
-            		  plugin.sMdebug("Recipe matched - found: " + r.needBlock + "@"+r.needBlockData+", " + r.oldBlock + "@" + r.oldBlockData + "->" + r.newBlock + "@"+r.newBlockData+":" + r.world);
-            		  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
-            	  }
-            	  if ((!r.Near) || 
-            			  (p2.getWorld().getBlockAt(x, y, z).getType() != Material.valueOf(r.newBlock))) continue;
 
-            	  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
-              }
-            }
+      // As we are checking blocks in this loop, ensure we don't go out of Y axis bounds
+      Integer minY = (int)p2.getLocation().getY() - plugin.AREA_;
+      Integer maxY = (int)p2.getLocation().getY() + plugin.AREA_;
+	  if (maxY > 128) maxY = 128;
+	  if (minY < 0) minY = 0;
+
+	  // Loop through all blocks in the given area
+	  for (int x = (int)p2.getLocation().getX() - plugin.AREA_; x <= p2.getLocation().getX() + plugin.AREA_; x++)
+		  for (int y = minY; y <= maxY; y++)
+			  for (int z = (int)p2.getLocation().getZ() - plugin.AREA_; z <= p2.getLocation().getZ() + plugin.AREA_; z++)
+			  {
+				  int lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.DOWN).getLightLevel();
+				  String biome = p2.getWorld().getBlockAt(x, y, z).getBiome().name();
+				  
+				  for (Recipe r : plugin.Recipes) {
+					  Matcher matcher = pattern.matcher(r.world);
+					  if (r.world == "" || matcher.matches()) {
+
+						  // Check for ylevel
+						  if (r.yLevel != "") {
+							  if (r.yLevel.substring(0,1).equals("<")) {
+								  if (y >= Integer.parseInt(r.yLevel.substring(1))) {
+									  continue;
+								  }
+							  } else if (r.yLevel.substring(0,1).equals(">")) {
+								  if (y <= Integer.parseInt(r.yLevel.substring(1))) {
+									  continue;
+								  }
+							  } else {
+								  if (y != Integer.parseInt(r.yLevel)) {
+									  continue;
+								  }
+							  }
+						  }
+						  //plugin.sMdebug("passed ylevel, required:"+r.yLevel+", found:"+y);
+						  // Check for lightlevel
+						  if (r.lightLevel != "") {
+							  if (r.lightLevel.substring(0,1).matches("<")) {
+								  if (lightLevel >= Integer.parseInt(r.lightLevel.substring(1))) {
+									  continue;
+								  }
+							  } else if (r.lightLevel.substring(0,1).matches(">")) {
+								  if (lightLevel <= Integer.parseInt(r.lightLevel.substring(1))) {
+									  continue;
+								  }
+							  } else {
+								  if (lightLevel != Integer.parseInt(r.lightLevel)) {
+									  continue;
+								  }
+							  }
+						  }
+						  //plugin.sMdebug("passed lightlevel");
+						  // Check for biome
+						  if (r.biome != "") {
+							  if (!biome.equals(r.biome))
+							  {
+								  //plugin.sMdebug("Biomecheck failed, biome: "+biome+" required:"+r.biome);
+								  continue;
+							  }            	  
+						  }
+						  //plugin.sMdebug("passed biome");
+
+						  // If data exists for the needed block, check for a match - skip if no match.
+						  if (r.needBlockData != "") {
+							  //plugin.sMdebug("Checking data. - "+r.needBlock+"@"+r.needBlockData);
+							  if (r.needBlock.matches("LEAVES")) {
+								  //plugin.sMdebug("Leaves data found.");
+								  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
+							  }
+							  if (r.needBlock.matches("LOG")) {
+								  //plugin.sMdebug("Leaves data found.");
+								  if (p2.getWorld().getBlockAt(x, y, z).getData() != TreeSpecies.valueOf(r.needBlockData).getData()) continue;
+							  }
+							  if (r.needBlock.matches("WOOL")) {
+								  //plugin.sMdebug("Wool data found.");
+								  if (p2.getWorld().getBlockAt(x, y, z).getData() != DyeColor.valueOf(r.needBlockData).getData()) continue;
+							  }
+						  }
+						  if (p2.getWorld().getBlockAt(x, y, z).getType() == Material.valueOf(r.needBlock)) {
+							  plugin.sMdebug("Recipe matched - found: " + r.needBlock + "@"+r.needBlockData+", " + r.oldBlock + "@" + r.oldBlockData + "->" + r.newBlock + "@"+r.newBlockData+":" + r.world);
+							  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
+						  }
+						  if ((!r.Near) || 
+								  (p2.getWorld().getBlockAt(x, y, z).getType() != Material.valueOf(r.newBlock))) continue;
+
+						  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
+					  }
+				  }}
     }
   }
 

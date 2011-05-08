@@ -8,6 +8,9 @@ public class Recipe
 	public String newBlockData;
 	public String needBlock;
 	public String needBlockData;
+	public String lightLevel = "";
+	public String biome = "";
+	public String yLevel = "";
 	public int[] Chance = { 0, 10 };
 	public boolean Near = false;
 	public String world = "";

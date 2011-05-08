@@ -30,7 +30,6 @@ public class iGrow extends JavaPlugin
   public int AREA_ = 100;
   public boolean DEBUGMESSAGES_ = false;
   private final HashMap<Player, Boolean> debugees = new HashMap();
-  private final HashMap<String, String> recipeBlock = new HashMap();
   public ArrayList<Recipe> Recipes = new ArrayList();
   Thread Event = new onEvent(this);
 
@@ -160,21 +159,23 @@ public class iGrow extends JavaPlugin
 	    String[] donees = removeComments[0].split(",");
         Recipe recipe = new Recipe();
         if (strLine.contains("old:") && strLine.contains("new:")) {
-        	recipe = scanRecipes_2_2(donees, recipe);
+        	recipe = scanRecipeLine_2_2(donees, recipe);
         } else {
         	try {
         		Integer.parseInt(strLine.substring(0, 1));
         		//sMdebug("int parsed ("+strLine.substring(0,1)+") v2.0 scan running...");
-        		recipe = scanRecipes_2_0(donees, recipe);
+        		recipe = scanRecipeLine_2_0(donees, recipe);
         	}
         	catch(NumberFormatException nfe)
         	{
-        		recipe = scanRecipes_2_1(donees, recipe);
+        		recipe = scanRecipeLine_2_1(donees, recipe);
         	}
         } 
 
         if (recipe.oldBlock != null) {
-        	sMdebug("Recipe: oldblock:"+recipe.oldBlock+"@"+recipe.oldBlockData+", newblock: "+recipe.newBlock+"@"+recipe.newBlockData+", need: "+recipe.needBlock+"@"+recipe.needBlockData+", chance: "+recipe.Chance[0]+"/"+(recipe.Chance[1]+1)+", world:"+recipe.world);
+        	sMdebug("Recipe: oldblock:"+recipe.oldBlock+"@"+recipe.oldBlockData+", newblock: "+recipe.newBlock+"@"+recipe.newBlockData+", need: "+
+        			recipe.needBlock+"@"+recipe.needBlockData+", chance: "+recipe.Chance[0]+"/"+(recipe.Chance[1]+1)+", world:"+recipe.world+", biome: "+
+        			recipe.biome+", lightlevel: "+recipe.lightLevel+", ylevel: "+recipe.yLevel);
         
         	this.Recipes.add(recipe);
         } else {
@@ -188,7 +189,8 @@ public class iGrow extends JavaPlugin
     }
   }
     
-public Recipe scanRecipes_2_2(String[] donees, Recipe recipe) {
+public Recipe scanRecipeLine_2_2(String[] donees, Recipe recipe) {
+	HashMap<String, String> recipeBlock = new HashMap();
     for (int x = 0; x < donees.length; x++)
     {
         String[] recipeKeys = donees[x].split(":");
@@ -210,6 +212,11 @@ public Recipe scanRecipes_2_2(String[] donees, Recipe recipe) {
     	if (recipeBlock.get("need").split("@").length > 1) recipe.needBlockData = recipeBlock.get("need").split("@")[1];
     }
     if (recipeBlock.get("world") != null) recipe.world = recipeBlock.get("world");
+    if (recipeBlock.get("lightlevel") != null) recipe.lightLevel = recipeBlock.get("lightlevel");
+    if (recipeBlock.get("ylevel") != null) recipe.yLevel = recipeBlock.get("ylevel");
+    if (recipeBlock.get("biome") != null) recipe.biome = recipeBlock.get("biome");
+
+
     if (recipeBlock.get("near") != null) {
     	if (recipeBlock.get("near") == "true") {
     		recipe.Near = true;
@@ -227,7 +234,7 @@ public Recipe scanRecipes_2_2(String[] donees, Recipe recipe) {
     return recipe;
 }
         
-public Recipe scanRecipes_2_1(String[] donees, Recipe recipe) {
+public Recipe scanRecipeLine_2_1(String[] donees, Recipe recipe) {
         
 	    if ((donees.length < 4) || (donees.length > 6)) {
 	    	sMdebug("Invalid line, not enough values found.  Values found: "+donees.length+".  Should be 5 or 6.");
@@ -279,7 +286,7 @@ public Recipe scanRecipes_2_1(String[] donees, Recipe recipe) {
   }
 
 
-public Recipe scanRecipes_2_0(String[] donees, Recipe recipe) {
+public Recipe scanRecipeLine_2_0(String[] donees, Recipe recipe) {
 	if ((donees.length < 4) || (donees.length > 6)) {
     	sMdebug("Invalid line, not enough values found.  Values found: "+donees.length+".  Should be 5 or 6.");
 		return null;
