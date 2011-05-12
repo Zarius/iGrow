@@ -9,6 +9,11 @@ Version z2.1:
 * Multiworld!   
 * Recipes can now have a comment on the same line as the recipe (eg. "4,48,9,30:100,false,world  # cobble to moss adj. water")
 
+Version z2.2:
+
+* Recipes blocks are defined with bukkit enums now (eg. instead of 0 you write AIR) - easier to read and allows for next feature:
+* Data types can be specified for the needed block (LEAVES, LOG's & WOOL) - eg. AIR to LEAVES adj. LEAVES@BIRCH only
+
 Bugs
 * timer keeps on queuing changes. If the server can't keep up with the current changes this will eventually overload and crash the server.
 
