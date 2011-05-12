@@ -33,7 +33,24 @@ public class Listener
 		  for (int y = minY; y <= maxY; y++)
 			  for (int z = (int)p2.getLocation().getZ() - plugin.AREA_; z <= p2.getLocation().getZ() + plugin.AREA_; z++)
 			  {
-				  int lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.DOWN).getLightLevel();
+				  // Check the lightlevel, if zero check all sides in case we got a non-exposed face 
+				  /*int lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.DOWN).getLightLevel();
+				  if (lightLevel == 0) {
+					  lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.UP).getLightLevel();
+				  }
+				  if (lightLevel == 0) {
+					  lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.EAST).getLightLevel();
+				  }
+				  if (lightLevel == 0) {
+					  lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.WEST).getLightLevel();
+				  }
+				  if (lightLevel == 0) {
+					  lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.NORTH).getLightLevel();
+				  }
+				  if (lightLevel == 0) {
+					  lightLevel = p2.getWorld().getBlockAt(x, y, z).getFace(BlockFace.SOUTH).getLightLevel();
+				  }*/				  
+				  
 				  String biome = p2.getWorld().getBlockAt(x, y, z).getBiome().name();
 				  Byte thisBlockData = p2.getWorld().getBlockAt(x, y, z).getData();
 				  Material thisBlockType = p2.getWorld().getBlockAt(x, y, z).getType();
@@ -52,15 +69,17 @@ public class Listener
 								  if (y <= Integer.parseInt(r.yLevel.substring(1))) {
 									  continue;
 								  }
+							  } else if (r.yLevel.contains("-")) { // range
+								  String[] range = r.yLevel.split("-");
+								  if (y < Integer.parseInt(range[0]) || y > Integer.parseInt(range[1])) continue;
 							  } else {
 								  if (y != Integer.parseInt(r.yLevel)) {
 									  continue;
 								  }
 							  }
 						  }
-						  //plugin.sMdebug("passed ylevel, required:"+r.yLevel+", found:"+y);
 						  // Check for lightlevel
-						  if (r.lightLevel != "") {
+						 /* if (r.lightLevel != "") {
 							  if (r.lightLevel.substring(0,1).matches("<")) {
 								  if (lightLevel >= Integer.parseInt(r.lightLevel.substring(1))) {
 									  continue;
@@ -74,7 +93,8 @@ public class Listener
 									  continue;
 								  }
 							  }
-						  }
+						  }*/
+						  //plugin.sMdebug("passed lightlevel, required:"+r.lightLevel+", lightlevel:"+lightLevel);
 						  //plugin.sMdebug("passed lightlevel");
 						  // Check for biome
 						  if (r.biome != "") {
@@ -109,7 +129,7 @@ public class Listener
 						  if ((!r.Near) || 
 								  (thisBlockType != Material.valueOf(r.newBlock))) continue;
 
-						  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), r);
+						  ChangeBlocks(p2.getWorld(), plugin, p2.getWorld().getBlockAt(x, y, z), thisBlockType, r);
 					  }
 				  }}
     }
